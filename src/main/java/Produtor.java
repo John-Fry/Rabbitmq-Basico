@@ -1,23 +1,29 @@
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
+import com.rabbitmq.client.MessageProperties;
 
 public class Produtor {
 
+    private static final String TASK_QUEUE_NAME = "PDist";
+
     public static void main(String[] args) throws Exception {
+
         ConnectionFactory connectionFactory = new ConnectionFactory();
-        try (
-                Connection connection = connectionFactory.newConnection();
-                Channel canal = connection.createChannel();
-        ) {
-            String mensagem = "Olá";
-            String NOME_FILA = "plica";
+        connectionFactory.setHost("localhost");
+        connectionFactory.setUsername("mqadmin");
+        connectionFactory.setPassword("Admin123XX_");
 
-            //(queue, passive, durable, exclusive, autoDelete, arguments)
-            canal.queueDeclare(NOME_FILA, false, false, false, null);
+        try (Connection connection = connectionFactory.newConnection();
+             Channel canal = connection.createChannel()){
+            canal.queueDeclare(TASK_QUEUE_NAME, true, false, false, null);
+            String mensagem = "Olá, John Ewerton Marques Meireles";
 
-            // ​(exchange, routingKey, mandatory, immediate, props, byte[] body)
-            canal.basicPublish("", NOME_FILA, false, false, null, mensagem.getBytes());
+            canal.basicPublish ("", TASK_QUEUE_NAME,
+                    MessageProperties.PERSISTENT_TEXT_PLAIN,
+                    mensagem.getBytes("UTF-8"));
+            System.out.println ("[x] Enviado '" + mensagem + "'");
+
 
         }
     }

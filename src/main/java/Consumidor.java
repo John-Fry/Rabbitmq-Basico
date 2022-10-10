@@ -5,26 +5,51 @@ import com.rabbitmq.client.DeliverCallback;
 
 
 public class Consumidor {
+
+    private static final String TASK_QUEUE_NAME = "PDist";
+
     public static void main(String[] args) throws Exception {
+
         ConnectionFactory connectionFactory = new ConnectionFactory();
         connectionFactory.setHost("localhost");
-        Connection conexao = connectionFactory.newConnection();
-        Channel canal = conexao.createChannel();
+        connectionFactory.setUsername("mqadmin");
+        connectionFactory.setPassword("Admin123XX_");
 
-        String NOME_FILA = "plica"
-                + "";
-        canal.queueDeclare(NOME_FILA, false, false, false, null);
+        final Connection connection = connectionFactory.newConnection();
+        final Channel canal = connection.createChannel();
+
+        canal.queueDeclare(TASK_QUEUE_NAME, true, false, false, null);
+        System.out.println("[*] Aguardando mensagens. Para sair, pressione CTRL + C");
+
+        canal.basicQos(1);
 
         DeliverCallback callback = (consumerTag, delivery) -> {
-            String mensagem = new String(delivery.getBody());
-            System.out.println("Eu " + consumerTag + " Recebi: " + mensagem);
-        };
+            String mensagem = new String(delivery.getBody(), "UTF-8");
 
-        // fila, noAck, callback, callback em caso de cancelamento (por exemplo, a fila foi deletada)
-        canal.basicConsume(NOME_FILA, true, callback, consumerTag -> {
-            System.out.println("Cancelaram a fila: " + NOME_FILA);
+            System.out.println("[x] Recebido '" + mensagem + "'");
+            try {
+                doWork(mensagem);
+            } finally {
+                System.out.println("[x] Done");
+                canal.basicAck(delivery.getEnvelope().getDeliveryTag(), false);
+            }
+        };
+        canal.basicConsume(TASK_QUEUE_NAME, false, callback, consumerTag -> {
         });
+
+    };
+
+    private static void doWork(String task) {
+        for (char ch : task.toCharArray()) {
+            if (ch == '.') {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException _ignored) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
     }
-}
+};
 
 
